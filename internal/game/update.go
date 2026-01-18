@@ -5,9 +5,7 @@ import (
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/text"
-	"golang.org/x/image/font"
 )
 
 func (g *Game) Update() error {
