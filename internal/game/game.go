@@ -8,6 +8,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
+	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
@@ -155,15 +156,30 @@ func (g *Game) loadAndPlayBackgroundMusic() error {
 	// Читаем содержимое файла
 	audioData, err := os.ReadFile("assets/main_menu_sound.mp3")
 	if err != nil {
+		log.Printf("Warning: Could not read audio file: %v", err)
+		return err
+	}
+
+	// Check if the audio file is not empty
+	if len(audioData) <= 0 {
+		log.Printf("Warning: Audio file is empty")
+		return nil // Return nil to allow the game to continue without sound
+	}
+
+	// Create a stream decoder for MP3
+	stream, err := mp3.DecodeWithSampleRate(44100, NewBytesReadSeekCloser(audioData))
+	if err != nil {
+		log.Printf("Warning: Could not decode audio file: %v", err)
 		return err
 	}
 
 	// Создаем бесконечный поток для зацикливания
-	infiniteLoop := audio.NewInfiniteLoop(NewBytesReadSeekCloser(audioData), int64(len(audioData)))
+	infiniteLoop := audio.NewInfiniteLoop(stream, stream.Length())
 
 	// Создаем плеер
 	player, err := g.audioContext.NewPlayer(infiniteLoop)
 	if err != nil {
+		log.Printf("Warning: Could not create audio player: %v", err)
 		return err
 	}
 
