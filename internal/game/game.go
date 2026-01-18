@@ -2,6 +2,7 @@ package game
 
 import (
 	"image/color"
+	"io"
 	"log"
 	"os"
 
@@ -114,36 +115,62 @@ func NewGame() *Game {
 	return game
 }
 
+// BytesReadSeekCloser создает io.ReadSeekCloser из байтового массива
+type BytesReadSeekCloser struct {
+	data []byte
+	pos  int64
+}
+
+func (b *BytesReadSeekCloser) Read(p []byte) (n int, err error) {
+	if b.pos >= int64(len(b.data)) {
+		return 0, io.EOF
+	}
+	n = copy(p, b.data[b.pos:])
+	b.pos += int64(n)
+	return n, nil
+}
+
+func (b *BytesReadSeekCloser) Seek(offset int64, whence int) (int64, error) {
+	switch whence {
+	case io.SeekStart:
+		b.pos = offset
+	case io.SeekCurrent:
+		b.pos += offset
+	case io.SeekEnd:
+		b.pos = int64(len(b.data)) + offset
+	}
+	return b.pos, nil
+}
+
+func (b *BytesReadSeekCloser) Close() error {
+	return nil
+}
+
+func NewBytesReadSeekCloser(data []byte) io.ReadSeekCloser {
+	return &BytesReadSeekCloser{data: data}
+}
+
 // loadAndPlayBackgroundMusic загружает и воспроизводит фоновую музыку
 func (g *Game) loadAndPlayBackgroundMusic() error {
-	file, err := os.Open("assets/main_menu_sound.mp3")
+	// Читаем содержимое файла
+	audioData, err := os.ReadFile("assets/main_menu_sound.mp3")
 	if err != nil {
 		return err
 	}
 
-	stream, err := audio.DecodeWithSampleRate(g.audioContext.SampleRate(), file)
+	// Создаем бесконечный поток для зацикливания
+	infiniteLoop := audio.NewInfiniteLoop(NewBytesReadSeekCloser(audioData), int64(len(audioData)))
+
+	// Создаем плеер
+	player, err := g.audioContext.NewPlayer(infiniteLoop)
 	if err != nil {
 		return err
 	}
-
-	player, err := g.audioContext.NewPlayer(stream)
-	if err != nil {
-		return err
-	}
-
-	// Устанавливаем повторение музыки
-	player.SetLoop(true)
 
 	g.bgMusic = player
 
 	// Запускаем воспроизведение
-	if err := g.bgMusic.Rewind(); err != nil {
-		return err
-	}
-
-	if err := g.bgMusic.Play(); err != nil {
-		return err
-	}
+	g.bgMusic.Play()
 
 	return nil
 }
@@ -379,7 +406,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(float64(ScreenWidth)/float64(g.background.Bounds().Dx()),
 		float64(ScreenHeight)/float64(g.background.Bounds().Dy()))
-	op.ColorScale.Scale(0.4, 0.4, 0.4, 1.0)
+	
+	// Используем ColorM вместо ColorScale
+	var colorM ebiten.ColorM
+	colorM.Scale(0.4, 0.4, 0.4, 1.0)
+	op.ColorM = colorM
+	
 	screen.DrawImage(g.background, op)
 
 	// Меню
