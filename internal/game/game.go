@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/text"
 	"golang.org/x/image/font"
@@ -44,6 +45,10 @@ type Game struct {
 	glowIntensity float64
 	glowDirection float64
 	keyPressed    bool
+	
+	// Audio fields
+	audioContext *audio.Context
+	bgMusic      *audio.Player
 }
 
 func NewGame() *Game {
@@ -79,7 +84,10 @@ func NewGame() *Game {
 		log.Fatal("Failed to create menu font: ", err)
 	}
 
-	return &Game{
+	// Инициализируем аудио контекст
+	audioContext := audio.NewContext(44100)
+
+	game := &Game{
 		state:         MenuState,
 		language:      LanguageRussian,
 		background:    img,
@@ -89,6 +97,7 @@ func NewGame() *Game {
 		glowIntensity: 0,
 		glowDirection: 0.02,
 		keyPressed:    false,
+		audioContext:  audioContext,
 		menuItems: []MenuItem{
 			{"New Game", false},
 			{"Load Game", false},
@@ -96,6 +105,47 @@ func NewGame() *Game {
 			{"Exit", false},
 		},
 	}
+
+	// Загружаем и запускаем фоновую музыку
+	if err := game.loadAndPlayBackgroundMusic(); err != nil {
+		log.Printf("Warning: Failed to load background music: %v", err)
+	}
+
+	return game
+}
+
+// loadAndPlayBackgroundMusic загружает и воспроизводит фоновую музыку
+func (g *Game) loadAndPlayBackgroundMusic() error {
+	file, err := os.Open("assets/main_menu_sound.mp3")
+	if err != nil {
+		return err
+	}
+
+	stream, err := audio.DecodeWithSampleRate(g.audioContext.SampleRate(), file)
+	if err != nil {
+		return err
+	}
+
+	player, err := g.audioContext.NewPlayer(stream)
+	if err != nil {
+		return err
+	}
+
+	// Устанавливаем повторение музыки
+	player.SetLoop(true)
+
+	g.bgMusic = player
+
+	// Запускаем воспроизведение
+	if err := g.bgMusic.Rewind(); err != nil {
+		return err
+	}
+
+	if err := g.bgMusic.Play(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (g *Game) Update() error {
@@ -112,6 +162,9 @@ func (g *Game) Update() error {
 		} else {
 			os.Exit(0)
 		}
+		
+		// Обновляем состояние музыки при изменении состояния игры
+		g.updateMusicState()
 	}
 
 	// Обработка меню
@@ -291,6 +344,22 @@ func (g *Game) getText(key string) string {
 	return key
 }
 
+// updateMusicState управляет воспроизведением музыки в зависимости от текущего состояния игры
+func (g *Game) updateMusicState() {
+	if g.state == MenuState && g.bgMusic != nil {
+		// Если находимся в главном меню и музыка не играет, запускаем
+		if !g.bgMusic.IsPlaying() {
+			g.bgMusic.Rewind()
+			g.bgMusic.Play()
+		}
+	} else if g.state != MenuState && g.bgMusic != nil {
+		// Если вышли из главного меню, останавливаем музыку
+		if g.bgMusic.IsPlaying() {
+			g.bgMusic.Pause()
+		}
+	}
+}
+
 func (g *Game) handleMenuAction(index int) {
 	switch g.menuItems[index].label {
 	case "New Game":
@@ -300,6 +369,9 @@ func (g *Game) handleMenuAction(index int) {
 	case "Exit":
 		os.Exit(0)
 	}
+	
+	// Обновляем состояние музыки после изменения состояния игры
+	g.updateMusicState()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
