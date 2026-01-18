@@ -1,16 +1,8 @@
 ```
-# Go build artifacts
+# Compiled and build artifacts
 *.o
-*.a
-*.so
-*.dylib
-*.exe
+*.obj
 *.out
-
-# Go cache and tools
-.gocache/
-go/pkg/
-go/bin/
 
 # Dependencies
 vendor/
@@ -27,20 +19,13 @@ vendor/
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# System files
-.DS_Store
-Thumbs.db
 
 # Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Build directories
-build/
-dist/
-target/
+# Go specific
+*.test
+*.prof
 ```
