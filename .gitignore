@@ -1,3 +1,4 @@
+```
 # Compiled and build artifacts
 *.o
 *.obj
@@ -9,21 +10,22 @@ vendor/
 # Logs and temp files
 *.log
 *.tmp
-*.swp
-
-# Editors
-.vscode/
-.idea/
 
 # Environment
 .env
 .env.local
 *.env.*
 
+# Editors
+.vscode/
+.idea/
+
 # Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Original rules preserved
-*.log
+# Go specific
+*.test
+*.prof
+```

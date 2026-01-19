@@ -10,8 +10,11 @@ import (
 )
 
 func NewGame() *Game {
-	// Создаем видеопроигрыватель для видеофона
-	videoPlayer := NewDesktopVideoPlayer("assets/background_video.mp4")
+	// Загружаем фон
+	img, _, err := ebitenutil.NewImageFromFile("assets/background.png")
+	if err != nil {
+		log.Fatal("Failed to load background: ", err)
+	}
 
 	// Загружаем готический шрифт для заголовка
 	tt, err := opentype.Parse(AethelgardFont)
@@ -45,8 +48,7 @@ func NewGame() *Game {
 	game := &Game{
 		state:            MenuState,
 		language:         LanguageRussian,
-		background:       nil, // Не используем статичное изображение
-		videoPlayer:      videoPlayer,
+		background:       img,
 		titleFont:        titleFace,
 		menuFont:         menuFace,
 		selectedIndex:    0,
