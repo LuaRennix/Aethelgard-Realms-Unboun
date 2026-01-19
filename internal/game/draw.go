@@ -10,14 +10,23 @@ import (
 )
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	// Рисуем фон с затемнением для атмосферы
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(float64(ScreenWidth)/float64(g.background.Bounds().Dx()),
-		float64(ScreenHeight)/float64(g.background.Bounds().Dy()))
+	// Рисуем фон - видео или статическое изображение
+	if g.videoPlayer != nil && g.state == MenuState {
+		// Используем видеофон для меню
+		g.videoPlayer.Draw(screen)
+	} else if g.background != nil {
+		// Используем старое статическое изображение для других состояний
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Scale(float64(ScreenWidth)/float64(g.background.Bounds().Dx()),
+			float64(ScreenHeight)/float64(g.background.Bounds().Dy()))
 
-	// Используем ColorM для старых версий Ebiten
-	op.ColorM.Scale(0.4, 0.4, 0.4, 1.0)
-	screen.DrawImage(g.background, op)
+		// Используем ColorM для затемнения фона
+		op.ColorM.Scale(0.4, 0.4, 0.4, 1.0)
+		screen.DrawImage(g.background, op)
+	} else {
+		// Если ни видео, ни изображение не загружены, рисуем черный фон
+		screen.Fill(color.RGBA{0, 0, 0, 255})
+	}
 
 	// Меню
 	if g.state == MenuState {

@@ -9,6 +9,11 @@ import (
 )
 
 func (g *Game) Update() error {
+	// Обновляем видеофон, если он активен
+	if g.videoPlayer != nil && g.state == MenuState {
+		g.videoPlayer.Update()
+	}
+
 	// Проверяем статус музыки (для отладки)
 	if g.bgMusic != nil && g.state == MenuState {
 		if !g.bgMusic.IsPlaying() {

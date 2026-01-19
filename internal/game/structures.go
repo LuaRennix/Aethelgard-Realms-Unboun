@@ -14,7 +14,8 @@ type MenuItem struct {
 type Game struct {
 	state         int
 	language      int
-	background    *ebiten.Image
+	background    *ebiten.Image // Может быть nil, если используется видео
+	videoPlayer   VideoPlayer   // Видеофон для главного меню
 	menuItems     []MenuItem
 	selectedIndex int
 	titleFont     font.Face
