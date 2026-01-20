@@ -10,23 +10,29 @@ import (
 )
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	// Рисуем фон с затемнением для атмосферы
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(float64(ScreenWidth)/float64(g.background.Bounds().Dx()),
-		float64(ScreenHeight)/float64(g.background.Bounds().Dy()))
+	// Рисуем видео фон
+	var videoFrame *ebiten.Image
+	if g.videoPlayer != nil {
+		videoFrame = g.videoPlayer.CurrentFrame()
+	}
 
-	// Используем ColorM для старых версий Ebiten
-	op.ColorM.Scale(0.4, 0.4, 0.4, 1.0)
-	screen.DrawImage(g.background, op)
+	if videoFrame != nil {
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Scale(
+			float64(ScreenWidth)/float64(videoFrame.Bounds().Dx()),
+			float64(ScreenHeight)/float64(videoFrame.Bounds().Dy()),
+		)
+		op.ColorM.Scale(0.4, 0.4, 0.4, 1.0)
+		screen.DrawImage(videoFrame, op)
+	} else {
+		ebitenutil.DrawRect(screen, 0, 0, ScreenWidth, ScreenHeight, color.RGBA{0, 0, 0, 255})
+	}
 
-	// Меню
 	if g.state == MenuState {
-		// Название игры
 		title := "Aethelgard"
 		titleX := 60
 		titleY := 120
 
-		// Многослойная тень
 		for i := 5; i > 0; i-- {
 			shadowAlpha := uint8(30 * i)
 			text.Draw(screen, title, g.titleFont, titleX+i, titleY+i, color.RGBA{0, 0, 0, shadowAlpha})
@@ -34,17 +40,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		text.Draw(screen, title, g.titleFont, titleX, titleY, color.RGBA{230, 220, 200, 255})
 
-		// Подзаголовок
 		subtitle := "Realms Unbound"
 		subtitleY := titleY + 40
 		text.Draw(screen, subtitle, g.menuFont, titleX+10, subtitleY, color.RGBA{180, 170, 150, 200})
 
-		// Декоративная линия
 		titleBounds := text.BoundString(g.titleFont, title)
 		titleWidth := titleBounds.Max.X - titleBounds.Min.X
 		ebitenutil.DrawRect(screen, float64(titleX), float64(subtitleY+10), float64(titleWidth), 2, color.RGBA{180, 170, 150, 100})
 
-		// Пункты меню
 		menuX := 80
 		startY := 320
 
@@ -52,73 +55,61 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			itemY := startY + i*60
 			isSelected := i == g.selectedIndex
 
-			// Получаем текст и его размеры
 			itemText := g.getText(item.label)
 			textBounds := text.BoundString(g.menuFont, itemText)
 			textWidth := textBounds.Max.X - textBounds.Min.X
 
 			var textColor color.RGBA
 			if isSelected {
-				// Элегантное тонкое подчеркивание
 				glowValue := uint8(220 + 35*g.glowIntensity)
 
-				// Тонкая светящаяся линия под текстом
 				lineY := float64(itemY + 8)
 				lineWidth := float64(textWidth + 10)
 
-				// Свечение линии (3 слоя для мягкости)
 				for j := 0; j < 3; j++ {
 					glowAlpha := uint8(float64(60-j*15) * g.glowIntensity)
 					ebitenutil.DrawRect(screen, float64(menuX-5-j), lineY+float64(j), lineWidth+float64(j*2), 1, color.RGBA{180, 140, 255, glowAlpha})
 				}
 
-				// Основная яркая линия
 				ebitenutil.DrawRect(screen, float64(menuX-5), lineY, lineWidth, 2, color.RGBA{200, 160, 255, uint8(200 * g.glowIntensity)})
 
-				// Маленькая светящаяся точка слева
 				dotX := float64(menuX - 25)
 				dotY := float64(itemY - 8)
 				g.drawGlowingDot(screen, dotX, dotY, g.glowIntensity)
 
-				// Яркий текст
 				textColor = color.RGBA{glowValue, glowValue - 20, 255, 255}
 			} else {
-				// Невыбранные пункты - приглушенные
 				textColor = color.RGBA{150, 140, 130, 200}
 			}
 
-			// Мягкая тень текста
 			text.Draw(screen, itemText, g.menuFont, menuX+2, itemY+2, color.RGBA{0, 0, 0, 100})
-
-			// Основной текст
 			text.Draw(screen, itemText, g.menuFont, menuX, itemY, textColor)
 		}
 
 		g.drawBottomDecoration(screen)
 	}
 
-	// Меню настроек
 	if g.state == SettingsState {
 		// Затемнение фона
 		ebitenutil.DrawRect(screen, 0, 0, ScreenWidth, ScreenHeight, color.RGBA{0, 0, 0, 220})
 
-		// Заголовок настроек
+		// Заголовок "НАСТРОЙКИ"
 		settingsTitle := g.getText("Settings")
 		titleBounds := text.BoundString(g.titleFont, settingsTitle)
 		titleWidth := titleBounds.Max.X - titleBounds.Min.X
 		titleX := ScreenWidth/2 - titleWidth/2
-		titleY := 100
+		titleY := 80
 
-		// Многослойная тень
-		for i := 4; i > 0; i-- {
-			shadowAlpha := uint8(30 * i)
-			text.Draw(screen, settingsTitle, g.titleFont, titleX+i, titleY+i, color.RGBA{0, 0, 0, shadowAlpha})
+		// Тень — чёрная + фиолетовая
+		for i := 3; i > 0; i-- {
+			text.Draw(screen, settingsTitle, g.titleFont, titleX+i, titleY+i, color.RGBA{0, 0, 0, uint8(30 * i)})
+			text.Draw(screen, settingsTitle, g.titleFont, titleX+i/2, titleY+i/2, color.RGBA{100, 80, 160, uint8(20 * i)})
 		}
+		// Основной текст
 		text.Draw(screen, settingsTitle, g.titleFont, titleX, titleY, color.RGBA{230, 220, 200, 255})
-
 		// Декоративная линия
 		lineY := float64(titleY + 20)
-		ebitenutil.DrawRect(screen, float64(ScreenWidth/2-int(titleWidth)/2), lineY, float64(titleWidth), 2, color.RGBA{180, 170, 150, 100})
+		ebitenutil.DrawRect(screen, float64(ScreenWidth/2-titleWidth/2), lineY, float64(titleWidth), 2, color.RGBA{180, 170, 150, 100})
 
 		// === СЕКЦИЯ ЯЗЫКА ===
 		languageLabel := g.getText("Language")
@@ -132,14 +123,22 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		mouseX, mouseY := ebiten.CursorPosition()
 
-		// Кнопки языка (уменьшены и ближе друг к другу)
-		russianButtonX := ScreenWidth/2 - 130
-		russianButtonY := 230
-		russianButtonWidth := 120
-		russianButtonHeight := 45
+		// --- КНОПКА "РУССКИЙ" ---
+		russianText := "Русский"
+		russianTextBounds := text.BoundString(g.menuFont, russianText)
+		russianTextWidth := float64(russianTextBounds.Max.X - russianTextBounds.Min.X)
+		russianTextHeight := float64(russianTextBounds.Max.Y - russianTextBounds.Min.Y)
 
-		russianButtonHover := mouseX >= russianButtonX && mouseX <= russianButtonX+russianButtonWidth &&
-			mouseY >= russianButtonY && mouseY <= russianButtonY+russianButtonHeight
+		buttonPaddingX := 16.0
+		buttonPaddingY := 12.0
+		buttonWidth := russianTextWidth + buttonPaddingX*2
+		buttonHeight := russianTextHeight + buttonPaddingY*2
+
+		russianButtonX := float64(ScreenWidth/2 - int(buttonWidth) - 10) // 10 — отступ между кнопками
+		russianButtonY := float64(230)
+
+		russianButtonHover := mouseX >= int(russianButtonX) && mouseX <= int(russianButtonX+buttonWidth) &&
+			mouseY >= int(russianButtonY) && mouseY <= int(russianButtonY+buttonHeight)
 		russianSelected := g.language == LanguageRussian
 
 		var russianBgColor, russianBorderColor, russianTextColor color.RGBA
@@ -157,37 +156,44 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			russianTextColor = color.RGBA{180, 170, 160, 200}
 		}
 
-		// Рисуем кнопку Russian
-		ebitenutil.DrawRect(screen, float64(russianButtonX), float64(russianButtonY), float64(russianButtonWidth), float64(russianButtonHeight), russianBgColor)
-		ebitenutil.DrawRect(screen, float64(russianButtonX), float64(russianButtonY), float64(russianButtonWidth), 2, russianBorderColor)
-		ebitenutil.DrawRect(screen, float64(russianButtonX), float64(russianButtonY+russianButtonHeight-2), float64(russianButtonWidth), 2, russianBorderColor)
-		ebitenutil.DrawRect(screen, float64(russianButtonX), float64(russianButtonY), 2, float64(russianButtonHeight), russianBorderColor)
-		ebitenutil.DrawRect(screen, float64(russianButtonX+russianButtonWidth-2), float64(russianButtonY), 2, float64(russianButtonHeight), russianBorderColor)
+		// Рисуем фон кнопки
+		ebitenutil.DrawRect(screen, russianButtonX, russianButtonY, buttonWidth, buttonHeight, russianBgColor)
 
-		russianText := "Русский"
-		russianTextBounds := text.BoundString(g.menuFont, russianText)
-		russianTextWidth := russianTextBounds.Max.X - russianTextBounds.Min.X
-		russianTextHeight := russianTextBounds.Max.Y - russianTextBounds.Min.Y
-		russianTextX := russianButtonX + russianButtonWidth/2 - russianTextWidth/2
-		russianTextY := russianButtonY + russianButtonHeight/2 + russianTextHeight/3
+		// Рисуем рамку
+		borderSize := 2.0
+		ebitenutil.DrawRect(screen, russianButtonX, russianButtonY, buttonWidth, borderSize, russianBorderColor)
+		ebitenutil.DrawRect(screen, russianButtonX, russianButtonY+buttonHeight-borderSize, buttonWidth, borderSize, russianBorderColor)
+		ebitenutil.DrawRect(screen, russianButtonX, russianButtonY, borderSize, buttonHeight, russianBorderColor)
+		ebitenutil.DrawRect(screen, russianButtonX+buttonWidth-borderSize, russianButtonY, borderSize, buttonHeight, russianBorderColor)
 
+		// Центрируем текст внутри кнопки
+		russianTextX := int(russianButtonX + buttonPaddingX)
+		russianTextY := int(russianButtonY + buttonPaddingY + russianTextHeight/2)
+
+		// Тень текста
 		text.Draw(screen, russianText, g.menuFont, russianTextX+2, russianTextY+2, color.RGBA{0, 0, 0, 180})
 		text.Draw(screen, russianText, g.menuFont, russianTextX, russianTextY, russianTextColor)
 
 		if russianSelected {
 			dotX := float64(russianButtonX + 12)
-			dotY := float64(russianButtonY + russianButtonHeight/2)
+			dotY := float64(russianButtonY + buttonHeight/2)
 			g.drawGlowingDot(screen, dotX, dotY, g.glowIntensity)
 		}
 
-		// Кнопка English
-		englishButtonX := ScreenWidth/2 + 10
-		englishButtonY := 230
-		englishButtonWidth := 120
-		englishButtonHeight := 45
+		// --- КНОПКА "ENGLISH" ---
+		englishText := "English"
+		englishTextBounds := text.BoundString(g.menuFont, englishText)
+		englishTextWidth := float64(englishTextBounds.Max.X - englishTextBounds.Min.X)
+		englishTextHeight := float64(englishTextBounds.Max.Y - englishTextBounds.Min.Y)
 
-		englishButtonHover := mouseX >= englishButtonX && mouseX <= englishButtonX+englishButtonWidth &&
-			mouseY >= englishButtonY && mouseY <= englishButtonY+englishButtonHeight
+		englishButtonWidth := englishTextWidth + buttonPaddingX*2
+		englishButtonHeight := englishTextHeight + buttonPaddingY*2
+
+		englishButtonX := float64(ScreenWidth/2 + 10) // 10 — отступ между кнопками
+		englishButtonY := float64(230)
+
+		englishButtonHover := mouseX >= int(englishButtonX) && mouseX <= int(englishButtonX+englishButtonWidth) &&
+			mouseY >= int(englishButtonY) && mouseY <= int(englishButtonY+englishButtonHeight)
 		englishSelected := g.language == LanguageEnglish
 
 		var englishBgColor, englishBorderColor, englishTextColor color.RGBA
@@ -205,18 +211,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			englishTextColor = color.RGBA{180, 170, 160, 200}
 		}
 
-		ebitenutil.DrawRect(screen, float64(englishButtonX), float64(englishButtonY), float64(englishButtonWidth), float64(englishButtonHeight), englishBgColor)
-		ebitenutil.DrawRect(screen, float64(englishButtonX), float64(englishButtonY), float64(englishButtonWidth), 2, englishBorderColor)
-		ebitenutil.DrawRect(screen, float64(englishButtonX), float64(englishButtonY+englishButtonHeight-2), float64(englishButtonWidth), 2, englishBorderColor)
-		ebitenutil.DrawRect(screen, float64(englishButtonX), float64(englishButtonY), 2, float64(englishButtonHeight), englishBorderColor)
-		ebitenutil.DrawRect(screen, float64(englishButtonX+englishButtonWidth-2), float64(englishButtonY), 2, float64(englishButtonHeight), englishBorderColor)
+		ebitenutil.DrawRect(screen, englishButtonX, englishButtonY, englishButtonWidth, englishButtonHeight, englishBgColor)
 
-		englishText := "English"
-		englishTextBounds := text.BoundString(g.menuFont, englishText)
-		englishTextWidth := englishTextBounds.Max.X - englishTextBounds.Min.X
-		englishTextHeight := englishTextBounds.Max.Y - englishTextBounds.Min.Y
-		englishTextX := englishButtonX + englishButtonWidth/2 - englishTextWidth/2
-		englishTextY := englishButtonY + englishButtonHeight/2 + englishTextHeight/3
+		ebitenutil.DrawRect(screen, englishButtonX, englishButtonY, englishButtonWidth, borderSize, englishBorderColor)
+		ebitenutil.DrawRect(screen, englishButtonX, englishButtonY+englishButtonHeight-borderSize, englishButtonWidth, borderSize, englishBorderColor)
+		ebitenutil.DrawRect(screen, englishButtonX, englishButtonY, borderSize, englishButtonHeight, englishBorderColor)
+		ebitenutil.DrawRect(screen, englishButtonX+englishButtonWidth-borderSize, englishButtonY, borderSize, englishButtonHeight, englishBorderColor)
+
+		englishTextX := int(englishButtonX + buttonPaddingX)
+		englishTextY := int(englishButtonY + buttonPaddingY + englishTextHeight/2)
 
 		text.Draw(screen, englishText, g.menuFont, englishTextX+2, englishTextY+2, color.RGBA{0, 0, 0, 180})
 		text.Draw(screen, englishText, g.menuFont, englishTextX, englishTextY, englishTextColor)
@@ -237,7 +240,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		text.Draw(screen, volumeLabel, g.menuFont, volumeLabelX+2, volumeLabelY+2, color.RGBA{0, 0, 0, 150})
 		text.Draw(screen, volumeLabel, g.menuFont, volumeLabelX, volumeLabelY, color.RGBA{200, 190, 180, 255})
 
-		// Слайдер громкости (более компактный)
+		// Слайдер громкости
 		volumeSliderX := ScreenWidth/2 - 150
 		volumeSliderY := 360
 		volumeSliderWidth := 300
@@ -281,14 +284,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		text.Draw(screen, volumeText, g.menuFont, volumeTextX+2, volumeTextY+2, color.RGBA{0, 0, 0, 180})
 		text.Draw(screen, volumeText, g.menuFont, volumeTextX, volumeTextY, color.RGBA{220, 200, 255, 255})
 
-		// Кнопка "Назад" (ниже и по центру)
-		backButtonX := ScreenWidth/2 - 100
-		backButtonY := 480
-		backButtonWidth := 200
-		backButtonHeight := 50
+		// --- КНОПКА "НАЗАД" ---
+		backText := g.getText("Back")
+		backTextBounds := text.BoundString(g.menuFont, backText)
+		backTextWidth := float64(backTextBounds.Max.X - backTextBounds.Min.X)
+		backTextHeight := float64(backTextBounds.Max.Y - backTextBounds.Min.Y)
 
-		backButtonHover := mouseX >= backButtonX && mouseX <= backButtonX+backButtonWidth &&
-			mouseY >= backButtonY && mouseY <= backButtonY+backButtonHeight
+		backButtonWidth := backTextWidth + 32.0   // 16 с каждой стороны
+		backButtonHeight := backTextHeight + 24.0 // 12 сверху и снизу
+
+		backButtonX := float64(ScreenWidth/2 - int(backButtonWidth)/2)
+		backButtonY := float64(480)
+
+		backButtonHover := mouseX >= int(backButtonX) && mouseX <= int(backButtonX+backButtonWidth) &&
+			mouseY >= int(backButtonY) && mouseY <= int(backButtonY+backButtonHeight)
 
 		var backBgColor, backBorderColor, backTextColor color.RGBA
 		if backButtonHover {
@@ -301,24 +310,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			backTextColor = color.RGBA{200, 190, 180, 255}
 		}
 
-		ebitenutil.DrawRect(screen, float64(backButtonX), float64(backButtonY), float64(backButtonWidth), float64(backButtonHeight), backBgColor)
-		ebitenutil.DrawRect(screen, float64(backButtonX), float64(backButtonY), float64(backButtonWidth), 2, backBorderColor)
-		ebitenutil.DrawRect(screen, float64(backButtonX), float64(backButtonY+backButtonHeight-2), float64(backButtonWidth), 2, backBorderColor)
-		ebitenutil.DrawRect(screen, float64(backButtonX), float64(backButtonY), 2, float64(backButtonHeight), backBorderColor)
-		ebitenutil.DrawRect(screen, float64(backButtonX+backButtonWidth-2), float64(backButtonY), 2, float64(backButtonHeight), backBorderColor)
+		ebitenutil.DrawRect(screen, backButtonX, backButtonY, backButtonWidth, backButtonHeight, backBgColor)
 
-		backText := g.getText("Back")
-		backTextBounds := text.BoundString(g.menuFont, backText)
-		backTextWidth := backTextBounds.Max.X - backTextBounds.Min.X
-		backTextHeight := backTextBounds.Max.Y - backTextBounds.Min.Y
-		backTextX := backButtonX + backButtonWidth/2 - backTextWidth/2
-		backTextY := backButtonY + backButtonHeight/2 + backTextHeight/3
+		ebitenutil.DrawRect(screen, backButtonX, backButtonY, backButtonWidth, borderSize, backBorderColor)
+		ebitenutil.DrawRect(screen, backButtonX, backButtonY+backButtonHeight-borderSize, backButtonWidth, borderSize, backBorderColor)
+		ebitenutil.DrawRect(screen, backButtonX, backButtonY, borderSize, backButtonHeight, backBorderColor)
+		ebitenutil.DrawRect(screen, backButtonX+backButtonWidth-borderSize, backButtonY, borderSize, backButtonHeight, backBorderColor)
+
+		backTextX := int(backButtonX + 16)
+		backTextY := int(backButtonY + 12 + backTextHeight/2)
 
 		text.Draw(screen, backText, g.menuFont, backTextX+2, backTextY+2, color.RGBA{0, 0, 0, 180})
 		text.Draw(screen, backText, g.menuFont, backTextX, backTextY, backTextColor)
 	}
 
-	// Игровой процесс
 	if g.state == GameState {
 		ebitenutil.DrawRect(screen, 0, 0, ScreenWidth, ScreenHeight, color.RGBA{0, 0, 0, 200})
 
@@ -342,7 +347,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) drawGlowingDot(screen *ebiten.Image, x, y, intensity float64) {
-	// Мягкое свечение (меньше и изящнее)
 	for i := 0; i < 4; i++ {
 		size := float64(8 - i*2)
 		alpha := uint8(50 * intensity * float64(4-i) / 4.0)
@@ -350,7 +354,6 @@ func (g *Game) drawGlowingDot(screen *ebiten.Image, x, y, intensity float64) {
 		ebitenutil.DrawRect(screen, x-offset, y-offset, size, size, color.RGBA{200, 160, 255, alpha})
 	}
 
-	// Яркое ядро (маленькое)
 	coreAlpha := uint8(220 + 35*intensity)
 	ebitenutil.DrawRect(screen, x-1, y-1, 2, 2, color.RGBA{240, 220, 255, coreAlpha})
 }
