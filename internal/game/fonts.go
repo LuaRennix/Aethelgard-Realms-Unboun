@@ -5,13 +5,21 @@ import (
 	"os"
 )
 
-var AethelgardFont []byte
+var TanaFont []byte
+var HudSonicFont []byte
 
 func init() {
-	// Load font file directly
-	data, err := os.ReadFile("assets/AethelgardFont.ttf")
+	// Заголовочный шрифт (Tana Uncial SP)
+	tana, err := os.ReadFile("assets/fonts/TanaUncialSP.ttf")
 	if err != nil {
-		log.Fatal("Failed to load font file: ", err)
+		log.Fatal("Failed to load Tana Uncial SP font: ", err)
 	}
-	AethelgardFont = data
+	TanaFont = tana
+
+	// Шрифт меню (HUD Sonic X1)
+	hud, err := os.ReadFile("assets/fonts/HUD-Sonic-X1.otf")
+	if err != nil {
+		log.Fatal("Failed to load HUD Sonic X1 font: ", err)
+	}
+	HudSonicFont = hud
 }
