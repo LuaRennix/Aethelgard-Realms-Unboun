@@ -10,54 +10,73 @@ import (
 )
 
 func NewGame() *Game {
-	// Загружаем фон
-	img, _, err := ebitenutil.NewImageFromFile("assets/background.png")
+	// Видео
+	videoPlayer, err := NewVideoPlayer("assets/menu-background-video.mp4", 30)
 	if err != nil {
-		log.Fatal("Failed to load background: ", err)
+		log.Printf("Failed to init VideoPlayer: %v, falling back to static image", err)
+
+		img, _, err := ebitenutil.NewImageFromFile("assets/background.png")
+		if err != nil {
+			log.Fatal("Failed to load fallback background: ", err)
+		}
+
+		videoPlayer = &VideoPlayer{
+			framePaths:   nil,
+			currentIndex: 0,
+			frameCount:   1,
+			frameDelay:   1,
+			frameTimer:   0,
+			fps:          0,
+			currentFrame: img,
+		}
 	}
 
-	// Загружаем готический шрифт для заголовка
-	tt, err := opentype.Parse(AethelgardFont)
+	// === Заголовочный шрифт (Tana Uncial SP) ===
+	ttTitle, err := opentype.Parse(TanaFont)
 	if err != nil {
-		log.Fatal("Failed to parse font: ", err)
+		log.Fatal("Failed to parse Tana Uncial SP font:", err)
 	}
 
-	// Большой шрифт для заголовка (готический стиль)
-	titleFace, err := opentype.NewFace(tt, &opentype.FaceOptions{
+	titleFace, err := opentype.NewFace(ttTitle, &opentype.FaceOptions{
 		Size:    72,
 		DPI:     72,
 		Hinting: font.HintingFull,
 	})
 	if err != nil {
-		log.Fatal("Failed to create title font: ", err)
+		log.Fatal("Failed to create title font:", err)
 	}
 
-	// Меньший шрифт для пунктов меню
-	menuFace, err := opentype.NewFace(tt, &opentype.FaceOptions{
+	// === Шрифт меню (HUD Sonic X1) ===
+	ttMenu, err := opentype.Parse(HudSonicFont)
+	if err != nil {
+		log.Fatal("Failed to parse HUD Sonic X1 font:", err)
+	}
+
+	menuFace, err := opentype.NewFace(ttMenu, &opentype.FaceOptions{
 		Size:    28,
 		DPI:     72,
 		Hinting: font.HintingFull,
 	})
 	if err != nil {
-		log.Fatal("Failed to create menu font: ", err)
+		log.Fatal("Failed to create menu font:", err)
 	}
 
-	// Инициализируем аудио контекст
+	// Аудио
 	audioContext := audio.NewContext(44100)
 
+	// === Создаём игру ===
 	game := &Game{
-		state:            MenuState,
-		language:         LanguageRussian,
-		background:       img,
-		titleFont:        titleFace,
-		menuFont:         menuFace,
-		selectedIndex:    0,
-		glowIntensity:    0,
-		glowDirection:    0.02,
-		keyPressed:       false,
-		audioContext:     audioContext,
-		masterVolume:     0.7, // 70% по умолчанию
-		isDraggingVolume: false,
+		state:         MenuState,
+		language:      LanguageRussian,
+		videoPlayer:   videoPlayer,
+		titleFont:     titleFace, // Tana Uncial SP
+		menuFont:      menuFace,  // HUD Sonic X1
+		selectedIndex: 0,
+		glowIntensity: 0,
+		glowDirection: 0.02,
+		keyPressed:    false,
+		audioContext:  audioContext,
+		masterVolume:  0.7,
 		menuItems: []MenuItem{
 			{"New Game", false},
 			{"Load Game", false},
@@ -66,12 +85,9 @@ func NewGame() *Game {
 		},
 	}
 
-	// Загружаем и запускаем фоновую музыку
+	// Музыка
 	if err := game.loadAndPlayBackgroundMusic(); err != nil {
 		log.Printf("Warning: Failed to load background music: %v", err)
-		// Продолжаем работу без музыки
-	} else {
-		log.Println("Background music loaded successfully!")
 	}
 
 	return game
