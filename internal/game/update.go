@@ -9,7 +9,10 @@ import (
 )
 
 func (g *Game) Update() error {
-	// Проверяем статус музыки (для отладки)
+	if g.videoPlayer != nil {
+		g.videoPlayer.Update()
+	}
+
 	if g.bgMusic != nil && g.state == MenuState {
 		if !g.bgMusic.IsPlaying() {
 			log.Println("Music stopped unexpectedly, restarting...")
@@ -18,7 +21,6 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// Обработка ESC (исправлено - теперь не вылетает)
 	escPressed := ebiten.IsKeyPressed(ebiten.KeyEscape)
 
 	if escPressed && !g.keyPressed {
@@ -32,13 +34,10 @@ func (g *Game) Update() error {
 			os.Exit(0)
 		}
 
-		// Обновляем состояние музыки при изменении состояния игры
 		g.updateMusicState()
 	}
 
-	// Обработка меню
 	if g.state == MenuState {
-		// Анимация свечения
 		g.glowIntensity += g.glowDirection
 		if g.glowIntensity > 1.0 {
 			g.glowIntensity = 1.0
@@ -48,12 +47,10 @@ func (g *Game) Update() error {
 			g.glowDirection = 0.02
 		}
 
-		// Навигация клавишами (исправлено - теперь не "летает")
 		upPressed := ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW)
 		downPressed := ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS)
 		enterPressed := ebiten.IsKeyPressed(ebiten.KeyEnter) || ebiten.IsKeyPressed(ebiten.KeySpace)
 
-		// Обработка только при новом нажатии (не зажатии)
 		if (upPressed || downPressed || enterPressed) && !g.keyPressed {
 			g.keyPressed = true
 
@@ -76,12 +73,10 @@ func (g *Game) Update() error {
 			}
 		}
 
-		// Сброс флага при отпускании клавиши
 		if !upPressed && !downPressed && !enterPressed && !escPressed {
 			g.keyPressed = false
 		}
 
-		// Обработка мыши
 		mouseX, mouseY := ebiten.CursorPosition()
 		menuX := 80
 		startY := 320
@@ -95,7 +90,6 @@ func (g *Game) Update() error {
 				mouseY >= itemY-itemHeight && mouseY <= itemY+10 {
 				g.selectedIndex = i
 
-				// Клик мышью
 				if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 					g.handleMenuAction(i)
 				}
@@ -103,9 +97,7 @@ func (g *Game) Update() error {
 		}
 	}
 
-	// Обработка меню настроек
 	if g.state == SettingsState {
-		// Анимация свечения продолжается
 		g.glowIntensity += g.glowDirection
 		if g.glowIntensity > 1.0 {
 			g.glowIntensity = 1.0
@@ -118,7 +110,6 @@ func (g *Game) Update() error {
 		mouseX, mouseY := ebiten.CursorPosition()
 		mouseClicked := ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 
-		// Обработка переключателя языка (Russian)
 		russianButtonX := ScreenWidth/2 - 130
 		russianButtonY := 230
 		russianButtonWidth := 120
@@ -132,7 +123,6 @@ func (g *Game) Update() error {
 			}
 		}
 
-		// Обработка переключателя языка (English)
 		englishButtonX := ScreenWidth/2 + 10
 		englishButtonY := 230
 		englishButtonWidth := 120
@@ -146,7 +136,6 @@ func (g *Game) Update() error {
 			}
 		}
 
-		// Обработка кнопки назад
 		backButtonX := ScreenWidth/2 - 100
 		backButtonY := 480
 		backButtonWidth := 200
@@ -160,13 +149,11 @@ func (g *Game) Update() error {
 			}
 		}
 
-		// Обработка слайдера громкости
 		volumeSliderX := ScreenWidth/2 - 150
 		volumeSliderY := 360
 		volumeSliderWidth := 300
 		volumeSliderHeight := 18
 
-		// Проверяем клик по слайдеру
 		if mouseY >= volumeSliderY && mouseY <= volumeSliderY+volumeSliderHeight &&
 			mouseX >= volumeSliderX && mouseX <= volumeSliderX+volumeSliderWidth {
 			if mouseClicked {
@@ -174,14 +161,11 @@ func (g *Game) Update() error {
 			}
 		}
 
-		// Обработка перетаскивания слайдера
 		if g.isDraggingVolume {
 			if mouseClicked {
-				// Вычисляем новую громкость на основе позиции мыши
 				relativeX := float64(mouseX - volumeSliderX)
 				g.masterVolume = relativeX / float64(volumeSliderWidth)
 
-				// Ограничиваем значение от 0 до 1
 				if g.masterVolume < 0 {
 					g.masterVolume = 0
 				}
@@ -189,14 +173,12 @@ func (g *Game) Update() error {
 					g.masterVolume = 1
 				}
 
-				// Применяем громкость
 				g.updateMusicState()
 			} else {
 				g.isDraggingVolume = false
 			}
 		}
 
-		// Сброс флага при отпускании мыши
 		if !mouseClicked && !escPressed {
 			g.keyPressed = false
 		}
