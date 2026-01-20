@@ -1,7 +1,6 @@
 package game
 
 import (
-	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"golang.org/x/image/font"
 )
@@ -12,20 +11,29 @@ type MenuItem struct {
 }
 
 type Game struct {
-	state         int
-	language      int
-	background    *ebiten.Image
+	// Состояние и язык
+	state    int
+	language int
+
+	// Меню
 	menuItems     []MenuItem
 	selectedIndex int
-	titleFont     font.Face
-	menuFont      font.Face
+
+	// Шрифты
+	titleFont font.Face
+	menuFont  font.Face
+
+	// Эффекты
 	glowIntensity float64
 	glowDirection float64
 	keyPressed    bool
 
-	// Audio fields
+	// Аудио
 	audioContext     *audio.Context
 	bgMusic          *audio.Player
-	masterVolume     float64 // 0.0 - 1.0
+	masterVolume     float64
 	isDraggingVolume bool
+
+	// Видео
+	videoPlayer *VideoPlayer
 }
