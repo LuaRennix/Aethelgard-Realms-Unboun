@@ -28,4 +28,12 @@ type Game struct {
 	bgMusic          *audio.Player
 	masterVolume     float64 // 0.0 - 1.0
 	isDraggingVolume bool
+
+	// Video fields
+	videoFrames   []*ebiten.Image
+	currentFrame  int
+	frameCount    int
+	frameRate     float64
+	lastFrameTime float64
+	videoPlaying  bool
 }

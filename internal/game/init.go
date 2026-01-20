@@ -58,6 +58,7 @@ func NewGame() *Game {
 		audioContext:     audioContext,
 		masterVolume:     0.7, // 70% по умолчанию
 		isDraggingVolume: false,
+		videoPlaying:     false, // Не начинать воспроизведение видео до тех пор, пока не будет загружено
 		menuItems: []MenuItem{
 			{"New Game", false},
 			{"Load Game", false},
@@ -72,6 +73,15 @@ func NewGame() *Game {
 		// Продолжаем работу без музыки
 	} else {
 		log.Println("Background music loaded successfully!")
+	}
+
+	// Загружаем видеофайл для главного меню
+	if err := game.loadVideoForMenu(); err != nil {
+		log.Printf("Warning: Failed to load menu video: %v", err)
+		// Продолжаем работу без видео
+	} else {
+		log.Println("Menu video loaded successfully!")
+		game.videoPlaying = true
 	}
 
 	return game
