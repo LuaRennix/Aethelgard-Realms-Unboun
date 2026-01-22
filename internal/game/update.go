@@ -70,6 +70,7 @@ func (g *Game) Update() error {
 
 			if enterPressed {
 				g.handleMenuAction(g.selectedIndex)
+				g.keyPressed = false
 			}
 		}
 

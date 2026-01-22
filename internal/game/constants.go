@@ -1,8 +1,8 @@
 package game
 
 const (
-	ScreenWidth  = 1920
-	ScreenHeight = 1080
+	ScreenWidth  = 1280
+	ScreenHeight = 720
 )
 
 const (
